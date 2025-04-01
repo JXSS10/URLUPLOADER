@@ -1,11 +1,15 @@
-
 import time
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from plugins.script import Translation
 from pyrogram import enums
 import math
 
+# متغير لتخزين آخر وقت تحديث (خارج الدالة للحفاظ على القيمة بين الاستدعاءات)
+last_update_time_global = 0  # تهيئة افتراضية
+
 async def progress_for_pyrogram(current, total, ud_type, message, start, bar_width=20, status=""):
+    global last_update_time_global  # الوصول إلى المتغير العام
+
     now = time.time()
     diff = now - start
     percentage = current * 100 / total
@@ -32,20 +36,27 @@ async def progress_for_pyrogram(current, total, ud_type, message, start, bar_wid
 
     status_message = f"**{ud_type}**\n\n{status}\n\n{tmp}"
 
-    try:
-        await message.edit(
-            text=status_message,
-            parse_mode=enums.ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [ 
-                        InlineKeyboardButton('⛔️ Cancel', callback_data='close')
+    # إضافة شرط التأخير الزمني
+    if (now - last_update_time_global) >= 3 or current == total: # 3 ثواني تأخير (يمكن تغييرها إلى 4)
+        try:
+            await message.edit(
+                text=status_message,
+                parse_mode=enums.ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton('⛔️ Cancel', callback_data='close')
+                        ]
                     ]
-                ]
+                )
             )
-        )
-    except Exception as e:
-        print(f"Error updating progress: {e}")
+            last_update_time_global = now  # تحديث آخر وقت تحديث
+        except Exception as e:
+            print(f"Error updating progress: {e}")
+    else:
+        # لا تقم بالتحديث إذا لم يمر 3 ثواني
+        pass
+
 
 def humanbytes(size):
     if not size:
